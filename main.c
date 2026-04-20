@@ -1,9 +1,13 @@
 #include "serial.h"
+#include "stm8s.h"
 #include "stm8s_clk.h"
+#include "stm8s_tim1.h"
 #include "stm8s_gpio.h"
 #include "stm8s_i2c.h"
+#include "stm8s_tim2.h"
 #include <stdbool.h>
 #include <stdio.h>
+
 /*
 O O
 B B
@@ -35,23 +39,56 @@ void initMPU();
 void MPU6050_Write(uint8_t reg, uint8_t data);
 uint8_t MPU6050_ReadReg(uint8_t reg);
 void readTemp();
+void initPWM();
+
+volatile uint8_t pwm_counter = 0;
+volatile uint8_t duty_F = 0; // 0 to 100
+volatile uint8_t duty_B = 0;
+volatile uint8_t duty_R = 0;
+volatile uint8_t duty_L = 0;
+uint16_t pwm = 0;
 
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
-  Serial_begin(115200);
+  // Serial_begin(115200);
 
   GPIO_Init(GPIOC, GPIO_PIN_6, GPIO_MODE_OUT_PP_LOW_FAST);
+  // GPIO_Init(B_PORT, B_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+  // GPIO_Init(F_PORT, F_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+  // GPIO_Init(L_PORT, L_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+  // GPIO_Init(R_PORT, R_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
-  initMPU();
-  MPU6050_Write(0x6B, 0x00); // Wake up MPU6050
+  initPWM();
+  // initMPU();
+  //
+
+  // MPU6050_Write(0x6B, 0x00); // Wake up MPU6050
+
+  // GPIO_WriteHigh(B_PORT, B_PIN);
+  // GPIO_WriteHigh(F_PORT, F_PIN);
+  // GPIO_WriteHigh(L_PORT, L_PIN);
+  // GPIO_WriteHigh(R_PORT, R_PIN);
+
+  bool down = false;
 
   while(true){
     // readTemp();
+    pwm = (pwm >= 4000) ? 0 : (pwm + 1); 
+    if(pwm >= 4000) down = true;
+    if(pwm <= 0) down = false;
+
+    down ? pwm-- : pwm++;
+
+    TIM1_SetCompare3(pwm++);
+    TIM1_SetCompare4(pwm++);
+
+    TIM2_SetCompare2(pwm++);
+    TIM2_SetCompare3(pwm++);
 
     GPIO_WriteHigh(GPIOC, GPIO_PIN_6);
-    for (volatile uint32_t i = 0; i < 50000; i++);
+    for (volatile uint32_t i = 0; i < 8000; i++);
     GPIO_WriteLow(GPIOC, GPIO_PIN_6);
-    for (volatile uint32_t i = 0; i < 50000; i++);
+    for (volatile uint32_t i = 0; i < 8000; i++);
   }
 }
 
@@ -143,4 +180,60 @@ void readTemp() {
     int32_t temp_mc = ((int32_t)raw_temp * 100 / 34) + 36530; 
 
     printf("Temp: %ld.%ld C\n", temp_mc / 1000, (temp_mc % 1000) / 100);
+}
+
+void initPWM(void){
+    // 1. Initialize GPIOs
+    // GPIO_Init(R_PORT, R_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+    // GPIO_Init(L_PORT, L_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+    // GPIO_Init(B_PORT, B_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+    // GPIO_Init(F_PORT, F_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+    // GPIO_Init(GPIOC, GPIO_PIN_3 | GPIO_PIN_4, GPIO_MODE_OUT_PP_LOW_FAST);
+
+    // 2. Enable Timer 1 Clock
+    CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER1, ENABLE);
+    CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER2, ENABLE);
+
+    // 3. Time Base: 16MHz / 16 = 1MHz clock, Period = 1000 ticks (0-999)
+    TIM1_TimeBaseInit(15, TIM1_COUNTERMODE_UP, 999, 0);
+    TIM2_TimeBaseInit(TIM2_PRESCALER_16, 999);
+
+    // 4. Configure Channels 1, 2, 3, and 4
+    // PWM Mode 1: Output is active as long as Counter < CCR value
+    TIM1_OC3Init(TIM1_OCMODE_PWM1,
+        TIM1_OUTPUTSTATE_ENABLE,
+        TIM1_OUTPUTNSTATE_DISABLE,
+        0,
+        TIM1_OCPOLARITY_HIGH,
+        TIM1_OCNPOLARITY_HIGH,
+        TIM1_OCIDLESTATE_SET,
+        TIM1_OCNIDLESTATE_RESET);
+
+    TIM1_OC4Init( 
+        TIM1_OCMODE_PWM1,
+        TIM1_OUTPUTSTATE_ENABLE,
+        0,
+        TIM1_OCPOLARITY_HIGH,
+        TIM1_OCIDLESTATE_SET);
+
+    TIM2_OC2Init(
+        TIM2_OCMODE_PWM1,
+        TIM2_OUTPUTSTATE_ENABLE,
+        0,
+        TIM2_OCPOLARITY_HIGH);
+
+    TIM2_OC3Init(
+        TIM2_OCMODE_PWM1,
+        TIM2_OUTPUTSTATE_ENABLE,
+        0,
+        TIM2_OCPOLARITY_HIGH);
+
+
+    // 5. CRITICAL for TIM1: Main Output Enable (Break Register)
+    TIM1_CtrlPWMOutputs(ENABLE);
+    TIM2_ARRPreloadConfig(ENABLE) ;
+
+    // 6. Start the Timer
+    TIM1_Cmd(ENABLE);
+    TIM2_Cmd(ENABLE);
 }

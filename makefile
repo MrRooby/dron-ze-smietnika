@@ -25,6 +25,8 @@ SOURCES = main.c \
           stm8s_gpio.c \
           stm8s_clk.c \
           stm8s_uart2.c \
+          stm8s_tim1.c \
+          stm8s_tim2.c \
           stm8s_i2c.c \
           serial.c
           # stm8l15x_spi.c \
