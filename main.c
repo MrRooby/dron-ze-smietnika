@@ -41,6 +41,7 @@ l - B2
 #define LEDS_PORT GPIOC
 #define LEDS_PIN GPIO_PIN_1
 
+
 inline void DelayDumb(const uint32_t ms);
 void initMPU();
 void MPU_Write(uint8_t reg, uint8_t data);
@@ -49,6 +50,9 @@ void readTemp();
 void initPWM();
 
 uint16_t pwm = 0;
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
@@ -83,6 +87,9 @@ int main(void){
     DelayDumb(1000);
   }
 }
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 inline void DelayDumb(const uint32_t ms){
     for (volatile uint32_t i = 0; i < (ms * 800); i++);
