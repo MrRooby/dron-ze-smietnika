@@ -50,12 +50,9 @@ uint16_t pwm = 0;
 
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
-  // Serial_begin(115200);
+  Serial_begin(115200);
 
   GPIO_Init(GPIOC, GPIO_PIN_6, GPIO_MODE_OUT_PP_LOW_FAST);
-  // GPIO_Init(B_PORT, B_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-  // GPIO_Init(F_PORT, F_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-  // GPIO_Init(L_PORT, L_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
   // GPIO_Init(R_PORT, R_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
   initPWM();
@@ -64,31 +61,27 @@ int main(void){
 
   // MPU6050_Write(0x6B, 0x00); // Wake up MPU6050
 
-  // GPIO_WriteHigh(B_PORT, B_PIN);
-  // GPIO_WriteHigh(F_PORT, F_PIN);
-  // GPIO_WriteHigh(L_PORT, L_PIN);
   // GPIO_WriteHigh(R_PORT, R_PIN);
 
   bool down = false;
 
   while(true){
+    printf("ping\n");
     // readTemp();
-    pwm = (pwm >= 4000) ? 0 : (pwm + 1); 
-    if(pwm >= 4000) down = true;
+    if(pwm >= 999) down = true;
     if(pwm <= 0) down = false;
 
     down ? pwm-- : pwm++;
 
     TIM1_SetCompare3(pwm++);
     TIM1_SetCompare4(pwm++);
-
     TIM2_SetCompare2(pwm++);
     TIM2_SetCompare3(pwm++);
 
     GPIO_WriteHigh(GPIOC, GPIO_PIN_6);
-    for (volatile uint32_t i = 0; i < 8000; i++);
+    for (volatile uint32_t i = 0; i < 80000; i++);
     GPIO_WriteLow(GPIOC, GPIO_PIN_6);
-    for (volatile uint32_t i = 0; i < 8000; i++);
+    for (volatile uint32_t i = 0; i < 80000; i++);
   }
 }
 
