@@ -35,6 +35,11 @@ l - B2
 #define MPU_SCK_PIN GPIO_PIN_5
 #define MPU6050_ADDRESS (0x68 << 1)
 
+// Heartbeat LED
+#define LED_PORT GPIOF
+#define LED_PIN GPIO_PIN_4
+
+inline void DelayDumb(const uint32_t ms);
 void initMPU();
 void MPU6050_Write(uint8_t reg, uint8_t data);
 uint8_t MPU6050_ReadReg(uint8_t reg);
@@ -50,22 +55,21 @@ uint16_t pwm = 0;
 
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
+  GPIO_Init(LED_PORT, LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+
   Serial_begin(115200);
 
-  GPIO_Init(GPIOC, GPIO_PIN_6, GPIO_MODE_OUT_PP_LOW_FAST);
-  // GPIO_Init(R_PORT, R_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-
   initPWM();
-  // initMPU();
-  //
+  initMPU();
+  DelayDumb(100);
 
-  // MPU6050_Write(0x6B, 0x00); // Wake up MPU6050
-
-  // GPIO_WriteHigh(R_PORT, R_PIN);
+  // MPU6050_Write(0x6B, 0x00);
+  // DelayDumb(100);
 
   bool down = false;
 
   while(true){
+    // MPU6050_ReadReg(0x75);
     printf("ping\n");
     // readTemp();
     if(pwm >= 999) down = true;
@@ -78,31 +82,22 @@ int main(void){
     TIM2_SetCompare2(pwm++);
     TIM2_SetCompare3(pwm++);
 
-    GPIO_WriteHigh(GPIOC, GPIO_PIN_6);
-    for (volatile uint32_t i = 0; i < 80000; i++);
-    GPIO_WriteLow(GPIOC, GPIO_PIN_6);
-    for (volatile uint32_t i = 0; i < 80000; i++);
+    GPIO_WriteReverse(LED_PORT, LED_PIN);
+    DelayDumb(1000);
   }
 }
 
+inline void DelayDumb(const uint32_t ms){
+    for (volatile uint32_t i = 0; i < (ms * 800); i++);
+}
+
 void initMPU(){
-  GPIO_Init(MPU_SCL_PORT, MPU_SCL_PIN, GPIO_MODE_OUT_OD_HIZ_FAST); 
-  GPIO_Init(MPU_SCK_PORT, MPU_SCK_PIN, GPIO_MODE_OUT_OD_HIZ_FAST);
-
   CLK_PeripheralClockConfig(CLK_PERIPHERAL_I2C, ENABLE);
-
-  for(int i = 0; i < 9; i++) {
-     GPIO_WriteHigh(MPU_SCK_PORT, MPU_SCK_PIN); // SDA High
-     GPIO_WriteLow(MPU_SCL_PORT, MPU_SCL_PIN);  // SCL Low
-     for(volatile int d=0; d<100; d++);
-     GPIO_WriteHigh(MPU_SCL_PORT, MPU_SCL_PIN); // SCL High
-     for(volatile int d=0; d<100; d++);
-  }
 
   I2C_DeInit();                              
   I2C_Init(
-      100000,                        
-      0x00,                           
+      100000,           // 100kHz I2C Clock
+      0x68,             // Own address
       I2C_DUTYCYCLE_2,               
       I2C_ACK_CURR,                   
       I2C_ADDMODE_7BIT,
