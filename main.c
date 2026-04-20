@@ -35,27 +35,24 @@ l - B2
 #define MPU_SCK_PIN GPIO_PIN_5
 #define MPU6050_ADDRESS (0x68 << 1)
 
-// Heartbeat LED
-#define LED_PORT GPIOF
-#define LED_PIN GPIO_PIN_4
+// LEDs
+#define B_LED_PORT GPIOF
+#define B_LED_PIN GPIO_PIN_4
+#define LEDS_PORT GPIOC
+#define LEDS_PIN GPIO_PIN_1
 
 inline void DelayDumb(const uint32_t ms);
 void initMPU();
-void MPU6050_Write(uint8_t reg, uint8_t data);
-uint8_t MPU6050_ReadReg(uint8_t reg);
+void MPU_Write(uint8_t reg, uint8_t data);
+uint8_t MPU_ReadReg(uint8_t reg);
 void readTemp();
 void initPWM();
 
-volatile uint8_t pwm_counter = 0;
-volatile uint8_t duty_F = 0; // 0 to 100
-volatile uint8_t duty_B = 0;
-volatile uint8_t duty_R = 0;
-volatile uint8_t duty_L = 0;
 uint16_t pwm = 0;
 
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
-  GPIO_Init(LED_PORT, LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+  GPIO_Init(B_LED_PORT, B_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
   Serial_begin(115200);
 
@@ -82,7 +79,7 @@ int main(void){
     TIM2_SetCompare2(pwm++);
     TIM2_SetCompare3(pwm++);
 
-    GPIO_WriteReverse(LED_PORT, LED_PIN);
+    GPIO_WriteReverse(B_LED_PORT, B_LED_PIN);
     DelayDumb(1000);
   }
 }
@@ -107,7 +104,7 @@ void initMPU(){
   I2C_Cmd(ENABLE);
 }
 
-void MPU6050_Write(uint8_t reg, uint8_t data) {
+void MPU_Write(uint8_t reg, uint8_t data) {
     I2C_GenerateSTART(ENABLE);
     while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
 
@@ -123,7 +120,7 @@ void MPU6050_Write(uint8_t reg, uint8_t data) {
     I2C_GenerateSTOP(ENABLE);
 }
 
-uint8_t MPU6050_ReadReg(uint8_t reg) {
+uint8_t MPU_ReadReg(uint8_t reg) {
     uint8_t data;
 
     // 1. Wait for bus to be idle
@@ -158,8 +155,8 @@ uint8_t MPU6050_ReadReg(uint8_t reg) {
 }
 
 void readTemp() {
-    uint8_t msb = MPU6050_ReadReg(0x41);
-    uint8_t lsb = MPU6050_ReadReg(0x42);
+    uint8_t msb = MPU_ReadReg(0x41);
+    uint8_t lsb = MPU_ReadReg(0x42);
 
     // Combine into signed 16-bit
     int16_t raw_temp = (int16_t)((msb << 8) | lsb);
@@ -171,23 +168,12 @@ void readTemp() {
 }
 
 void initPWM(void){
-    // 1. Initialize GPIOs
-    // GPIO_Init(R_PORT, R_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-    // GPIO_Init(L_PORT, L_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-    // GPIO_Init(B_PORT, B_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-    // GPIO_Init(F_PORT, F_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
-    // GPIO_Init(GPIOC, GPIO_PIN_3 | GPIO_PIN_4, GPIO_MODE_OUT_PP_LOW_FAST);
-
-    // 2. Enable Timer 1 Clock
     CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER1, ENABLE);
     CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER2, ENABLE);
 
-    // 3. Time Base: 16MHz / 16 = 1MHz clock, Period = 1000 ticks (0-999)
     TIM1_TimeBaseInit(15, TIM1_COUNTERMODE_UP, 999, 0);
     TIM2_TimeBaseInit(TIM2_PRESCALER_16, 999);
 
-    // 4. Configure Channels 1, 2, 3, and 4
-    // PWM Mode 1: Output is active as long as Counter < CCR value
     TIM1_OC3Init(TIM1_OCMODE_PWM1,
         TIM1_OUTPUTSTATE_ENABLE,
         TIM1_OUTPUTNSTATE_DISABLE,
@@ -196,32 +182,26 @@ void initPWM(void){
         TIM1_OCNPOLARITY_HIGH,
         TIM1_OCIDLESTATE_SET,
         TIM1_OCNIDLESTATE_RESET);
-
     TIM1_OC4Init( 
         TIM1_OCMODE_PWM1,
         TIM1_OUTPUTSTATE_ENABLE,
         0,
         TIM1_OCPOLARITY_HIGH,
         TIM1_OCIDLESTATE_SET);
-
     TIM2_OC2Init(
         TIM2_OCMODE_PWM1,
         TIM2_OUTPUTSTATE_ENABLE,
         0,
         TIM2_OCPOLARITY_HIGH);
-
     TIM2_OC3Init(
         TIM2_OCMODE_PWM1,
         TIM2_OUTPUTSTATE_ENABLE,
         0,
         TIM2_OCPOLARITY_HIGH);
 
-
-    // 5. CRITICAL for TIM1: Main Output Enable (Break Register)
     TIM1_CtrlPWMOutputs(ENABLE);
     TIM2_ARRPreloadConfig(ENABLE) ;
 
-    // 6. Start the Timer
     TIM1_Cmd(ENABLE);
     TIM2_Cmd(ENABLE);
 }
