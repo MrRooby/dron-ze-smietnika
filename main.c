@@ -64,18 +64,17 @@ int main(void){
   initMPU();
   DelayDumb(100);
 
-  // MPU6050_Write(0x6B, 0x00);
+  MPU_Write(0x6B, 0x00);
   // DelayDumb(100);
 
   bool down = false;
 
   while(true){
-    // MPU6050_ReadReg(0x75);
     printf("ping\n");
+
     // readTemp();
     if(pwm >= 999) down = true;
     if(pwm <= 0) down = false;
-
     down ? pwm-- : pwm++;
 
     TIM1_SetCompare3(pwm++);
@@ -97,11 +96,12 @@ inline void DelayDumb(const uint32_t ms){
 
 void initMPU(){
   CLK_PeripheralClockConfig(CLK_PERIPHERAL_I2C, ENABLE);
+  GPIO_Init(GPIOB, GPIO_PIN_4 | GPIO_PIN_5, GPIO_MODE_OUT_OD_HIZ_FAST);
 
   I2C_DeInit();                              
   I2C_Init(
       100000,           // 100kHz I2C Clock
-      0x68,             // Own address
+      0x01,             // Own address
       I2C_DUTYCYCLE_2,               
       I2C_ACK_CURR,                   
       I2C_ADDMODE_7BIT,
@@ -112,103 +112,104 @@ void initMPU(){
 }
 
 void MPU_Write(uint8_t reg, uint8_t data) {
-    I2C_GenerateSTART(ENABLE);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
+  I2C_GenerateSTART(ENABLE);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT)) {GPIO_WriteHigh(B_LED_PORT, B_LED_PIN);}
+  GPIO_WriteLow(B_LED_PORT, B_LED_PIN);
 
-    I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_TX);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-    
-    I2C_SendData(reg);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-    
-    I2C_SendData(data);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-    
-    I2C_GenerateSTOP(ENABLE);
+  I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_TX);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+
+  I2C_SendData(reg);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+
+  I2C_SendData(data);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+
+  I2C_GenerateSTOP(ENABLE);
 }
 
 uint8_t MPU_ReadReg(uint8_t reg) {
-    uint8_t data;
+  uint8_t data;
 
-    // 1. Wait for bus to be idle
-    while (I2C_GetFlagStatus(I2C_FLAG_BUSBUSY));
+  // 1. Wait for bus to be idle
+  while (I2C_GetFlagStatus(I2C_FLAG_BUSBUSY));
 
-    // 2. Start + Address (Write Mode)
-    I2C_GenerateSTART(ENABLE);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
-    I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_TX);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+  // 2. Start + Address (Write Mode)
+  I2C_GenerateSTART(ENABLE);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
+  I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_TX);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
 
-    // 3. Point to the register
-    I2C_SendData(reg);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+  // 3. Point to the register
+  I2C_SendData(reg);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 
-    // 4. Restart + Address (Read Mode)
-    I2C_GenerateSTART(ENABLE);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
-    I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_RX);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+  // 4. Restart + Address (Read Mode)
+  I2C_GenerateSTART(ENABLE);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
+  I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_RX);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 
-    // 5. Read the byte and NACK (since it's only 1 byte)
-    I2C_AcknowledgeConfig(I2C_ACK_NONE); // Don't ack the last byte
-    I2C_GenerateSTOP(ENABLE);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_RECEIVED));
-    data = I2C_ReceiveData();
+  // 5. Read the byte and NACK (since it's only 1 byte)
+  I2C_AcknowledgeConfig(I2C_ACK_NONE); // Don't ack the last byte
+  I2C_GenerateSTOP(ENABLE);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_RECEIVED));
+  data = I2C_ReceiveData();
 
-    // Re-enable ACK for future multi-byte reads
-    I2C_AcknowledgeConfig(I2C_ACK_CURR);
+  // Re-enable ACK for future multi-byte reads
+  I2C_AcknowledgeConfig(I2C_ACK_CURR);
 
-    return data;
+  return data;
 }
 
 void readTemp() {
-    uint8_t msb = MPU_ReadReg(0x41);
-    uint8_t lsb = MPU_ReadReg(0x42);
+  uint8_t msb = MPU_ReadReg(0x41);
+  uint8_t lsb = MPU_ReadReg(0x42);
 
-    // Combine into signed 16-bit
-    int16_t raw_temp = (int16_t)((msb << 8) | lsb);
+  // Combine into signed 16-bit
+  int16_t raw_temp = (int16_t)((msb << 8) | lsb);
 
-    // Convert to float (or milli-Celsius to avoid floats on STM8)
-    int32_t temp_mc = ((int32_t)raw_temp * 100 / 34) + 36530; 
+  // Convert to float (or milli-Celsius to avoid floats on STM8)
+  int32_t temp_mc = ((int32_t)raw_temp * 100 / 34) + 36530; 
 
-    printf("Temp: %ld.%ld C\n", temp_mc / 1000, (temp_mc % 1000) / 100);
+  printf("Temp: %ld.%ld C\n", temp_mc / 1000, (temp_mc % 1000) / 100);
 }
 
 void initPWM(void){
-    CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER1, ENABLE);
-    CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER2, ENABLE);
+  CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER1, ENABLE);
+  CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER2, ENABLE);
 
-    TIM1_TimeBaseInit(15, TIM1_COUNTERMODE_UP, 999, 0);
-    TIM2_TimeBaseInit(TIM2_PRESCALER_16, 999);
+  TIM1_TimeBaseInit(15, TIM1_COUNTERMODE_UP, 999, 0);
+  TIM2_TimeBaseInit(TIM2_PRESCALER_16, 999);
 
-    TIM1_OC3Init(TIM1_OCMODE_PWM1,
-        TIM1_OUTPUTSTATE_ENABLE,
-        TIM1_OUTPUTNSTATE_DISABLE,
-        0,
-        TIM1_OCPOLARITY_HIGH,
-        TIM1_OCNPOLARITY_HIGH,
-        TIM1_OCIDLESTATE_SET,
-        TIM1_OCNIDLESTATE_RESET);
-    TIM1_OC4Init( 
-        TIM1_OCMODE_PWM1,
-        TIM1_OUTPUTSTATE_ENABLE,
-        0,
-        TIM1_OCPOLARITY_HIGH,
-        TIM1_OCIDLESTATE_SET);
-    TIM2_OC2Init(
-        TIM2_OCMODE_PWM1,
-        TIM2_OUTPUTSTATE_ENABLE,
-        0,
-        TIM2_OCPOLARITY_HIGH);
-    TIM2_OC3Init(
-        TIM2_OCMODE_PWM1,
-        TIM2_OUTPUTSTATE_ENABLE,
-        0,
-        TIM2_OCPOLARITY_HIGH);
+  TIM1_OC3Init(TIM1_OCMODE_PWM1,
+      TIM1_OUTPUTSTATE_ENABLE,
+      TIM1_OUTPUTNSTATE_DISABLE,
+      0,
+      TIM1_OCPOLARITY_HIGH,
+      TIM1_OCNPOLARITY_HIGH,
+      TIM1_OCIDLESTATE_SET,
+      TIM1_OCNIDLESTATE_RESET);
+  TIM1_OC4Init( 
+      TIM1_OCMODE_PWM1,
+      TIM1_OUTPUTSTATE_ENABLE,
+      0,
+      TIM1_OCPOLARITY_HIGH,
+      TIM1_OCIDLESTATE_SET);
+  TIM2_OC2Init(
+      TIM2_OCMODE_PWM1,
+      TIM2_OUTPUTSTATE_ENABLE,
+      0,
+      TIM2_OCPOLARITY_HIGH);
+  TIM2_OC3Init(
+      TIM2_OCMODE_PWM1,
+      TIM2_OUTPUTSTATE_ENABLE,
+      0,
+      TIM2_OCPOLARITY_HIGH);
 
-    TIM1_CtrlPWMOutputs(ENABLE);
-    TIM2_ARRPreloadConfig(ENABLE) ;
+  TIM1_CtrlPWMOutputs(ENABLE);
+  TIM2_ARRPreloadConfig(ENABLE) ;
 
-    TIM1_Cmd(ENABLE);
-    TIM2_Cmd(ENABLE);
+  TIM1_Cmd(ENABLE);
+  TIM2_Cmd(ENABLE);
 }
