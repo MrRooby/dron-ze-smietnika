@@ -76,6 +76,8 @@ int main(void){
     if(pwm >= 999) down = true;
     if(pwm <= 0) down = false;
     down ? pwm-- : pwm++;
+    printf("PWM: %d\n", pwm);
+
 
     TIM1_SetCompare3(pwm++);
     TIM1_SetCompare4(pwm++);
