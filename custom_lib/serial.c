@@ -7,7 +7,7 @@ void Serial_begin(uint32_t baud_rate) {
       UART2_STOPBITS_1, 
       UART2_PARITY_NO, 
       UART2_SYNCMODE_CLOCK_DISABLE, 
-      UART2_MODE_TXRX_ENABLE);
+      UART2_MODE_TX_ENABLE);
 
   UART2_Cmd(ENABLE);
 }

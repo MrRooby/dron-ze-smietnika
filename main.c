@@ -64,7 +64,7 @@ int main(void){
   initMPU();
   DelayDumb(100);
 
-  MPU_Write(0x6B, 0x00);
+  // MPU_Write(0x6B, 0x00);
   // DelayDumb(100);
 
   bool down = false;
@@ -83,7 +83,7 @@ int main(void){
     TIM2_SetCompare3(pwm++);
 
     GPIO_WriteReverse(B_LED_PORT, B_LED_PIN);
-    DelayDumb(1000);
+    DelayDumb(100);
   }
 }
 
