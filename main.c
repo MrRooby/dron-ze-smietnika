@@ -9,20 +9,20 @@
 #include <stdio.h>
 
 /*
-O O
-B B
+   O O
+   B B
 
-B - te polutowane O1
-f - B1
-r - O2
-l - B2
-*/
+   B - te polutowane O1
+   f - B1
+   r - O2
+   l - B2
+   */
 
 // Drone Rotors
 #define L_PORT GPIOD
 #define L_PIN GPIO_PIN_3
 #define R_PORT GPIOD
-#define R_PIN GPIO_PIN_2
+#define R_PIN GPIO_PIN_0
 #define F_PORT GPIOC
 #define F_PIN GPIO_PIN_3
 #define B_PORT GPIOC
@@ -48,8 +48,10 @@ void MPU_Write(uint8_t reg, uint8_t data);
 uint8_t MPU_ReadReg(uint8_t reg);
 void readTemp();
 void initPWM();
+void rotors(const uint16_t O1, const uint16_t O2, const uint16_t B1, const uint16_t B2, const uint8_t delay);
 
 uint16_t pwm = 0;
+bool down = false;
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
@@ -57,35 +59,29 @@ uint16_t pwm = 0;
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
   GPIO_Init(B_LED_PORT, B_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+  GPIO_Init(LEDS_PORT, LEDS_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
   Serial_begin(115200);
 
   initPWM();
   initMPU();
-  DelayDumb(100);
+  GPIO_WriteHigh(LEDS_PORT, LEDS_PIN);
+  DelayDumb(3000);
 
-  // MPU_Write(0x6B, 0x00);
-  // DelayDumb(100);
-
-  bool down = false;
 
   while(true){
     printf("ping\n");
-
+    TIM1_SetCompare3(80);
+    TIM1_SetCompare4(80);
+    TIM2_SetCompare2(80);
+    TIM2_SetCompare3(80);
+    DelayDumb(5000);
+    TIM1_SetCompare3(0);
+    TIM1_SetCompare4(0);
+    TIM2_SetCompare2(0);
+    TIM2_SetCompare3(0);
+    DelayDumb(10000);
     // readTemp();
-    if(pwm >= 999) down = true;
-    if(pwm <= 0) down = false;
-    down ? pwm-- : pwm++;
-    printf("PWM: %d\n", pwm);
-
-
-    TIM1_SetCompare3(pwm++);
-    TIM1_SetCompare4(pwm++);
-    TIM2_SetCompare2(pwm++);
-    TIM2_SetCompare3(pwm++);
-
-    GPIO_WriteReverse(B_LED_PORT, B_LED_PIN);
-    DelayDumb(100);
   }
 }
 
@@ -93,7 +89,7 @@ int main(void){
 //////////////////////////////////////////////////////////////////////
 
 inline void DelayDumb(const uint32_t ms){
-    for (volatile uint32_t i = 0; i < (ms * 800); i++);
+  for (volatile uint32_t i = 0; i < (ms * 800); i++);
 }
 
 void initMPU(){
@@ -108,7 +104,7 @@ void initMPU(){
       I2C_ACK_CURR,                   
       I2C_ADDMODE_7BIT,
       16                            
-  );
+      );
 
   I2C_Cmd(ENABLE);
 }
@@ -214,4 +210,14 @@ void initPWM(void){
 
   TIM1_Cmd(ENABLE);
   TIM2_Cmd(ENABLE);
+}
+
+void rotors(const uint16_t O1, const uint16_t O2, const uint16_t B1, const uint16_t B2, const uint8_t delay){
+  for (int pwm = 0; pwm < 200; pwm++) {
+    if (pwm < O1) TIM1_SetCompare3(pwm);
+    if (pwm < O2) TIM1_SetCompare4(pwm);
+    if (pwm < B1) TIM2_SetCompare2(pwm);
+    if (pwm < B2) TIM2_SetCompare3(pwm);
+    DelayDumb(delay);
+  }
 }
