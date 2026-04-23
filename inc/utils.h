@@ -8,6 +8,6 @@
  * CPU: 16MHz, roughly 1us per 16 cycles
  * @param ms: Milliseconds to delay
  */
-inline void delayDumb(const uint32_t ms);
+void delay_ms_dumb(const uint32_t ms);
 
 #endif

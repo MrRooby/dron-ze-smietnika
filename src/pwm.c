@@ -73,6 +73,6 @@ void pwm_ramp_rotors(uint16_t front, uint16_t back, uint16_t left, uint16_t righ
     uint8_t r = (pwm < right) ? pwm : right;
     
     pwm_set_rotors(f, b, l, r);
-    delayDumb(delay_ms);
+    delay_ms_dumb(delay_ms);
   }
 }

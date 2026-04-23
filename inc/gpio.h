@@ -14,10 +14,10 @@
 #define ROTOR_B_PIN GPIO_PIN_4
 
 // LED Pins
-#define LED_STATUS_PORT GPIOF
-#define LED_STATUS_PIN GPIO_PIN_4
-#define LED_WINGS_PORT GPIOC
-#define LED_WINGS_PIN GPIO_PIN_1
+#define LED_BLUE_PORT GPIOF
+#define LED_BLUE_PIN GPIO_PIN_4
+#define LED_STATUS_PORT GPIOC
+#define LED_STATUS_PIN GPIO_PIN_1
 
 /**
  * Initialize GPIO pins for LEDs and status indicators
@@ -25,14 +25,14 @@
 void gpio_init_leds(void);
 
 /**
- * Turn on LEDs on wings
-*/
-void led_wings_on(void);
+ * Turn on blue LED
+ */
+void led_blue_on(void);
 
 /**
- * Turn off LEDs on wings
+ * Turn off blue LED
  */
-void led_wings_off(void);
+void led_blue_off(void);
 
 /**
  * Turn on status LED
