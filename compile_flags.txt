@@ -1,5 +1,5 @@
 -DSDCC
 -DSTM8S005
 -I.
+-Iinc
 -Ilib/STM8S_StdPeriph_Driver/inc
--Icustom_lib
