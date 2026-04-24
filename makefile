@@ -24,11 +24,13 @@ SOURCES = main.c \
           stm8s_uart2.c \
           stm8s_tim1.c \
           stm8s_tim2.c \
+          stm8s_tim3.c \
           stm8s_i2c.c \
           serial.c \
-          imu.c \
           radio.c \
+          timing.c \
           rotors.c
+          # imu.c \
 
 # Generate list of object files (.rel)
 # This strips the directory and changes .c to .rel

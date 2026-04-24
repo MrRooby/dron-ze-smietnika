@@ -1,6 +1,6 @@
 #include "rotors.h"
 
-void initPWM(void){
+void Rotors_Init(void){
   CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER1, ENABLE);
   CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER2, ENABLE);
 

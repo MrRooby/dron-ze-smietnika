@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "utils.h"
 #include "rotors.h"
-#include "imu.h"
+// #include "imu.h"
 #include "radio.h"
+#include "timing.h"
 
 #ifdef DEBUG
   #include "serial.h"
@@ -41,25 +41,27 @@ int main(void){
   GPIO_Init(B_LED_PORT, B_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
   GPIO_Init(LEDS_PORT, LEDS_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
+  Timer_Init();
+
 #ifdef DEBUG
   Serial_begin(115200);
 #endif /* ifdef DEBUG */
 
-  initPWM();
-  initMPU();
+  Rotors_Init();
+  // initMPU();
   GPIO_WriteHigh(LEDS_PORT, LEDS_PIN);
-  DelayDumb(3000);
+  Delay(3000);
 
 
   while(true){
 
 #ifdef DEBUG
-    printf("ping\n");
+    printf("ping %lu\n", millis());
 #endif /* ifdef DEBUG */
 
     setAllRotorPWM(80);
-    DelayDumb(5000);
+    Delay(5000);
     setAllRotorPWM(0);
-    DelayDumb(10000);
+    Delay(10000);
   }
 }

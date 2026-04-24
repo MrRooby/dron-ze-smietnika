@@ -21,7 +21,7 @@ enum Rotor {
   B2,  
 };
 
-void initPWM();
+void Rotors_Init(void);
 
 void setRotorPWM(enum Rotor rotor, const uint8_t pwm);
 
