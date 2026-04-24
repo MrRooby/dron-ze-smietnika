@@ -193,14 +193,14 @@ void IMU_Calibrate(const uint16_t samples){
     IMUData temp_data;
 
     for (uint16_t i = 0; i < samples; i++) {
-        IMU_ReadBurst(&temp_data);
-        
-        gyro_sum[0] += temp_data.gx;
-        gyro_sum[1] += temp_data.gy;
-        gyro_sum[2] += temp_data.gz;
-        
-        // Short delay to allow the sensor to refresh
-        Delay(2); 
+      IMU_ReadBurst(&temp_data);
+
+      gyro_sum[0] += temp_data.gx;
+      gyro_sum[1] += temp_data.gy;
+      gyro_sum[2] += temp_data.gz;
+
+      // Short delay to allow the sensor to refresh
+      Delay(2); 
     }
 
     // Average the results

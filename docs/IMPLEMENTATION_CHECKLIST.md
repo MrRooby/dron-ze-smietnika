@@ -3,22 +3,22 @@
 ## Phase 1: Core Flight Control (MVP)
 
 ### I2C & MPU6050 Driver
-- [ ] Configure STM8 I2C peripheral at 400kHz
-- [ ] Implement MPU6050 initialization
-  - [ ] Set sensitivity: ±8g accelerometer, ±500°/s gyroscope
-  - [ ] Configure digital low-pass filter (DLPF)
+- [✓] Configure STM8 I2C peripheral at 400kHz
+- [✓] Implement MPU6050 initialization
+  - [✓] Set sensitivity: ±8g accelerometer, ±500°/s gyroscope
+  - [✓] Configure digital low-pass filter (DLPF)
   - [ ] Set sample rate to 1kHz
-- [ ] Read 6-byte accel data from reg 0x3B-0x40
-- [ ] Read 6-byte gyro data from reg 0x43-0x48
+- [✓] Read 6-byte accel data from reg 0x3B-0x40
+- [✓] Read 6-byte gyro data from reg 0x43-0x48
 - [ ] Implement I2C error handling & retry logic
 
 ### IMU Processing (Complementary Filter)
-- [ ] Implement `computeIMU()` function
-- [ ] Dual gyro sampling with 650µs interleaving
-- [ ] Accelerometer low-pass filter (ACC_LPF_FACTOR = 4)
-- [ ] Gyro/Accel complementary filter fusion (GYR_CMPF_FACTOR = 10)
-- [ ] Calculate roll and pitch angles in degrees*100
-- [ ] Output: `att.angle[ROLL]`, `att.angle[PITCH]`
+- [✓] Implement `computeIMU()` function
+- [✓] Dual gyro sampling with 650µs interleaving
+- [✓] Accelerometer low-pass filter (ACC_LPF_FACTOR = 4)
+- [✓] Gyro/Accel complementary filter fusion (GYR_CMPF_FACTOR = 10)
+- [✓] Calculate roll and pitch angles in degrees*100
+- [✓] Output: `att.angle[ROLL]`, `att.angle[PITCH]`
 
 ### PID Stabilization
 - [ ] Implement 3-axis PID controller (ROLL, PITCH, YAW)
@@ -31,22 +31,22 @@
 - [ ] Output: `axisPID[ROLL/PITCH/YAW]`
 
 ### Motor Mixer (QUADX)
-- [ ] Implement `mixTable()` for X-configuration
+- [✓] Implement `mixTable()` for X-configuration
   - Motor[0] (Rear):  throttle + pitch + yaw
   - Motor[1] (Right): throttle - roll - yaw
   - Motor[2] (Left):  throttle - pitch + yaw
   - Motor[3] (Front): throttle + roll - yaw
-- [ ] Constrain output to MINTHROTTLE (1000) - MAXTHROTTLE (2000)
+- [✓] Constrain output to MINTHROTTLE (1000) - MAXTHROTTLE (2000)
 - [ ] Implement motor start failsafe
 
 ### PWM Motor Output (4x Timers)
 - [ ] Configure timer frequency for 50Hz PWM (20ms period)
-- [ ] Map motors to STM8 timers:
-  - [ ] Motor 0: TIM1_CH1 or similar (Rear)
-  - [ ] Motor 1: TIM1_CH2 (Right)
-  - [ ] Motor 2: TIM2_CH1 (Left)
-  - [ ] Motor 3: TIM2_CH2 (Front)
-- [ ] Implement 1000-2000µs pulse width control
+- [✓] Map motors to STM8 timers:
+  - [✓] Motor 0: TIM1_CH1 or similar (Rear)
+  - [✓] Motor 1: TIM1_CH2 (Right)
+  - [✓] Motor 2: TIM2_CH1 (Left)
+  - [✓] Motor 3: TIM2_CH2 (Front)
+- [✓] Implement 1000-2000µs pulse width control
 - [ ] Test each motor individually (prop-off first!)
 
 ### NRF24L01 Receiver
