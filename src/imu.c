@@ -1,4 +1,8 @@
 #include "imu.h"
+#include <stdint.h>
+
+int16_t gyro_bias[3] = {0,0,0};
+Attitude att = {{0,0}};
 
 void IMU_Init(void){
   CLK_PeripheralClockConfig(CLK_PERIPHERAL_I2C, ENABLE);
@@ -77,7 +81,7 @@ uint8_t MPU_ReadReg(uint8_t reg) {
   return data;
 }
 
-void readTemp() {
+void readTemp(void) {
   uint8_t msb = MPU_ReadReg(0x41);
   uint8_t lsb = MPU_ReadReg(0x42);
 
@@ -93,69 +97,114 @@ void readTemp() {
 }
 
 void IMU_ReadBurst(IMUData *data) {
-    uint8_t buffer[14];
+  uint8_t buffer[14];
 
-    // 1. Send start and register address
-    I2C_GenerateSTART(ENABLE);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
-    I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_TX);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-    
-    I2C_SendData(ACCEL_XOUT_H);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+  // 1. Send start and register address
+  I2C_GenerateSTART(ENABLE);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
+  I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_TX);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
 
-    // 2. Restart for Read
-    I2C_GenerateSTART(ENABLE);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
-    I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_RX);
-    while (!I2C_CheckEvent(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+  I2C_SendData(ACCEL_XOUT_H);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 
-    // 3. Sequential read
-    for(int i = 0; i < 14; i++) {
-        if(i == 13) {
-            I2C_AcknowledgeConfig(I2C_ACK_NONE); // NACK last byte
-            I2C_GenerateSTOP(ENABLE);
-        }
-        while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_RECEIVED));
-        buffer[i] = I2C_ReceiveData();
+  // 2. Restart for Read
+  I2C_GenerateSTART(ENABLE);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_MODE_SELECT));
+  I2C_Send7bitAddress(MPU6050_ADDRESS, I2C_DIRECTION_RX);
+  while (!I2C_CheckEvent(I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+
+  // 3. Sequential read
+  for(int i = 0; i < 14; i++) {
+    if(i == 13) {
+      I2C_AcknowledgeConfig(I2C_ACK_NONE); // NACK last byte
+      I2C_GenerateSTOP(ENABLE);
+    }
+    while (!I2C_CheckEvent(I2C_EVENT_MASTER_BYTE_RECEIVED));
+    buffer[i] = I2C_ReceiveData();
+  }
+
+  // 4. Parse buffer (skipping temp bytes 6 and 7)
+  data->ax = (int16_t)((buffer[0] << 8) | buffer[1]);
+  data->ay = (int16_t)((buffer[2] << 8) | buffer[3]);
+  data->az = (int16_t)((buffer[4] << 8) | buffer[5]);
+
+  data->gx = (int16_t)((buffer[8] << 8) | buffer[9]);
+  data->gy = (int16_t)((buffer[10] << 8) | buffer[11]);
+  data->gz = (int16_t)((buffer[12] << 8) | buffer[13]);
+
+  I2C_AcknowledgeConfig(I2C_ACK_CURR); // Restore for next time
+}
+
+void computeIMU(void) {
+  IMUData data1, data2;
+  int16_t gyro[3];
+  static int32_t accSmooth[3] = {0, 0, 0};
+  int16_t accAngle[2];
+  uint32_t timeInterleave;
+
+  IMU_ReadBurst(&data1);
+  timeInterleave = micros();
+  while((int16_t)(micros()-timeInterleave)<650);
+  IMU_ReadBurst(&data2);
+
+  // Averaged Gyro data with calibration offset
+  gyro[ROLL]  = ((data1.gx + data2.gx) >> 1) - gyro_bias[ROLL];
+  gyro[PITCH] = ((data1.gy + data2.gy) >> 1) - gyro_bias[PITCH];
+
+  // Low pass filter 
+  accSmooth[0] = ((accSmooth[0] * 3) + data1.ax) >> 2;
+  accSmooth[1] = ((accSmooth[1] * 3) + data1.ay) >> 2;
+  accSmooth[2] = ((accSmooth[2] * 3) + data1.az) >> 2;
+
+  // Calculate Accelerometer Angles (Simplified atan2 for small angles)
+  // MultiWii uses a lookup table or atan2. For STM8, degrees*10 is standard.
+  accAngle[ROLL]  = _atan2(accSmooth[1], accSmooth[2]);
+  accAngle[PITCH] = _atan2(accSmooth[0], accSmooth[2]);
+
+  int16_t gyroDelta = (int16_t)(((int32_t)gyro[ROLL] * 10) / 6553);
+  att.angle[ROLL] = ((GYR_CMPF_FACTOR * (att.angle[ROLL] + gyroDelta)) + accAngle[ROLL]) / (GYR_CMPF_FACTOR + 1);
+  gyroDelta = (int16_t)(((int32_t)gyro[PITCH] * 10) / 6553);
+  att.angle[PITCH] = ((GYR_CMPF_FACTOR * (att.angle[PITCH] + gyroDelta)) + accAngle[PITCH]) / (GYR_CMPF_FACTOR + 1);
+}
+
+
+int16_t _atan2(int32_t y, int32_t x){
+  int32_t abs_y = y < 0 ? -y : y;
+  int32_t abs_x = x < 0 ? -x : x;
+  int32_t angle = 0;
+
+  if (abs_y == 0 && abs_x == 0) return 0;
+
+  if(abs_x >= abs_y){
+    angle = (450 * abs_y) / abs_x;
+  } else {
+    angle = 900 - (450 * abs_x) / abs_y;
+  }
+
+  if (x < 0) angle = 1800 - angle;
+  if (y < 0) angle = -angle;
+
+  return (int16_t)angle;
+}
+
+void IMU_Calibrate(const uint16_t samples){
+  int32_t gyro_sum[3] = {0, 0, 0};
+    IMUData temp_data;
+
+    for (uint16_t i = 0; i < samples; i++) {
+        IMU_ReadBurst(&temp_data);
+        
+        gyro_sum[0] += temp_data.gx;
+        gyro_sum[1] += temp_data.gy;
+        gyro_sum[2] += temp_data.gz;
+        
+        // Short delay to allow the sensor to refresh
+        Delay(2); 
     }
 
-    // 4. Parse buffer (skipping temp bytes 6 and 7)
-    data->ax = (int16_t)((buffer[0] << 8) | buffer[1]);
-    data->ay = (int16_t)((buffer[2] << 8) | buffer[3]);
-    data->az = (int16_t)((buffer[4] << 8) | buffer[5]);
-    
-    data->gx = (int16_t)((buffer[8] << 8) | buffer[9]);
-    data->gy = (int16_t)((buffer[10] << 8) | buffer[11]);
-    data->gz = (int16_t)((buffer[12] << 8) | buffer[13]);
-
-    I2C_AcknowledgeConfig(I2C_ACK_CURR); // Restore for next time
+    // Average the results
+    gyro_bias[0] = (int16_t)(gyro_sum[0] / samples);
+    gyro_bias[1] = (int16_t)(gyro_sum[1] / samples);
+    gyro_bias[2] = (int16_t)(gyro_sum[2] / samples);
 }
-
-void computeIMU () {
-  IMUData data_first = {0,0,0,0,0,0}; 
-  IMUData data_second = {0,0,0,0,0,0}; 
-  IMUData data_final = {0,0,0,0,0,0}; 
-
-  uint8_t axis;
-  static int16_t gyroADCprevious[3] = {0,0,0};
-  static int16_t gyroADCinter[3];
-
-  uint16_t timeInterleave = 0;
-  IMU_ReadBurst(&data_first);
-  
-  timeInterleave = micros();
-  uint8_t t = 0;
-  while((int16_t)(micros()-timeInterleave)<650) t=1; //empirical, interleaving delay between 2 consecutive reads
-  IMU_ReadBurst(&data_second);
-
-  for (axis = 0; axis < 3; axis++) {
-
-    gyroADCinter[axis] =  imu.gyroADC[axis]+gyroADCinter[axis];
-    // empirical, we take a weighted value of the current and the previous values
-    imu.gyroData[axis] = (gyroADCinter[axis]+gyroADCprevious[axis])/3;
-    gyroADCprevious[axis] = gyroADCinter[axis]>>1;
-    if (!ACC) imu.accADC[axis]=0;
-  }
-}
-

@@ -29,8 +29,8 @@ SOURCES = main.c \
           serial.c \
           radio.c \
           timing.c \
+          imu.c \
           rotors.c
-          # imu.c \
 
 # Generate list of object files (.rel)
 # This strips the directory and changes .c to .rel
