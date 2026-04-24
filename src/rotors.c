@@ -39,12 +39,28 @@ void initPWM(void){
   TIM2_Cmd(ENABLE);
 }
 
-void rotors(const uint16_t O1, const uint16_t O2, const uint16_t B1, const uint16_t B2, const uint8_t delay){
-  for (int pwm = 0; pwm < 200; pwm++) {
-    if (pwm < O1) TIM1_SetCompare3(pwm);
-    if (pwm < O2) TIM1_SetCompare4(pwm);
-    if (pwm < B1) TIM2_SetCompare2(pwm);
-    if (pwm < B2) TIM2_SetCompare3(pwm);
-    DelayDumb(delay);
+void setRotorPWM(enum Rotor rotor, const uint8_t pwm){
+  switch (rotor) {
+    case O1:
+      TIM1_SetCompare3(pwm);
+      break;
+    case O2:
+      TIM1_SetCompare4(pwm);
+      break;
+    case B1:
+      TIM2_SetCompare2(pwm);
+      break;
+    case B2:
+      TIM2_SetCompare3(pwm);
+      break;
+    default:
+      return;
   }
+}
+
+void setAllRotorPWM(const uint8_t pwm){
+  TIM1_SetCompare3(pwm);
+  TIM1_SetCompare4(pwm);
+  TIM2_SetCompare2(pwm);
+  TIM2_SetCompare3(pwm);
 }
