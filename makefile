@@ -33,7 +33,8 @@ SOURCES = main.c \
           stm8s_uart2.c \
           stm8s_tim1.c \
           stm8s_tim2.c \
-          stm8s_i2c.c
+          stm8s_i2c.c \
+          stm8s_iwdg.c
 
 # Generate list of object files (.rel)
 # This strips the directory and changes .c to .rel
