@@ -7,20 +7,17 @@ DEVICE = STM8S005
 LIB_DIR    = lib/STM8S_StdPeriph_Driver
 INC_DIR    = $(LIB_DIR)/inc
 SRC_DIR    = $(LIB_DIR)/src
-CUSTOM_LIB = custom_lib 
 
 # Compiler and Flags
 CC      = sdcc-sdcc
 # -I. includes current dir, others include library headers and your custom headers
-CFLAGS  = -m$(MCU) -DSDCC -D$(DEVICE) -I. -I$(INC_DIR) -I$(CUSTOM_LIB)
+CFLAGS  = -m$(MCU) -DSDCC -D$(DEVICE) -I. -I$(INC_DIR) -Iinc
 
 # # Search paths for source files
 # # This tells make where to look for .c files automatically
-VPATH = $(SRC_DIR):$(CUSTOM_LIB)
+VPATH = $(SRC_DIR):src:.
 
 # Core Source Files
-# List the .c files you need. 
-# Note: We don't need the full path here because of VPATH
 SOURCES = main.c \
           stm8s_gpio.c \
           stm8s_clk.c \
