@@ -1,4 +1,4 @@
-#include "serial.h"
+#define DEBUG
 #include "stm8s.h"
 #include "stm8s_clk.h"
 #include "stm8s_tim1.h"
@@ -7,6 +7,10 @@
 #include "stm8s_tim2.h"
 #include <stdbool.h>
 #include <stdio.h>
+
+#ifdef DEBUG
+  #include "serial.h"
+#endif /* ifdef DEBUG */
 
 /*
    O O
@@ -61,7 +65,9 @@ int main(void){
   GPIO_Init(B_LED_PORT, B_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
   GPIO_Init(LEDS_PORT, LEDS_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
+#ifdef DEBUG
   Serial_begin(115200);
+#endif /* ifdef DEBUG */
 
   initPWM();
   initMPU();
@@ -70,7 +76,11 @@ int main(void){
 
 
   while(true){
+
+#ifdef DEBUG
     printf("ping\n");
+#endif /* ifdef DEBUG */
+
     TIM1_SetCompare3(80);
     TIM1_SetCompare4(80);
     TIM2_SetCompare2(80);
@@ -170,7 +180,9 @@ void readTemp() {
   // Convert to float (or milli-Celsius to avoid floats on STM8)
   int32_t temp_mc = ((int32_t)raw_temp * 100 / 34) + 36530; 
 
+#ifdef DEBUG
   printf("Temp: %ld.%ld C\n", temp_mc / 1000, (temp_mc % 1000) / 100);
+#endif /* ifdef DEBUG */
 }
 
 void initPWM(void){
