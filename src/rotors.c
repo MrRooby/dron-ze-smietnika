@@ -1,4 +1,5 @@
 #include "rotors.h"
+#include "pid.h"
 
 void Rotors_Init(void){
   CLK_PeripheralClockConfig(CLK_PERIPHERAL_TIMER1, ENABLE);
@@ -65,13 +66,13 @@ void setAllRotorPWM(const uint16_t pwm){
   TIM2_SetCompare3(pwm);
 }
 
-void mixTable(const int16_t throttle, const int16_t roll, const int16_t pitch, const int16_t yaw) {
+void mixTable(const int16_t throttle, AxisPID *p_pid) {
     int16_t motor[4];
 
-    motor[O1] = throttle + pitch + yaw; // Rear
-    motor[O2] = throttle - roll  - yaw; // Right
-    motor[B1] = throttle - pitch + yaw; // Left
-    motor[B2] = throttle + roll  - yaw; // Front
+    motor[O1] = throttle + p_pid->pitch + p_pid->yaw; // Rear
+    motor[O2] = throttle - p_pid->roll  - p_pid->yaw; // Right
+    motor[B1] = throttle - p_pid->pitch + p_pid->yaw; // Left
+    motor[B2] = throttle + p_pid->roll  - p_pid->yaw; // Front
 
     for (uint8_t i = 0; i < 4; i++) {
         // Constrain to 1000-2000 range
@@ -84,36 +85,3 @@ void mixTable(const int16_t throttle, const int16_t roll, const int16_t pitch, c
     }
 }
 
-void runPID(int16_t setpoint[3], int16_t currentAngle[3]) {
-    int16_t error;
-    int16_t delta;
-    int32_t pTerm, iTerm, dTerm;
-
-    for (uint8_t axis = 0; axis < 3; axis++) {
-        // 1. Calculate Error
-        error = setpoint[axis] - currentAngle[axis];
-
-        // 2. P-Term (Proportional)
-        pTerm = (int32_t)error * (axis == ROLL ? PID_ROLL_P : (axis == PITCH ? PID_PITCH_P : PID_YAW_P));
-
-        // 3. I-Term (Integral) with Anti-Windup
-        errorI[axis] += error;
-        // Simple Clamp Anti-Windup
-        if (errorI[axis] > I_LIMIT) errorI[axis] = I_LIMIT;
-        else if (errorI[axis] < -I_LIMIT) errorI[axis] = -I_LIMIT;
-        
-        iTerm = errorI[axis] * (axis == ROLL ? PID_ROLL_I : (axis == PITCH ? PID_PITCH_I : PID_YAW_I));
-
-        // 4. D-Term (Derivative) 
-        // Note: MultiWii usually applies D-term to the change in measurement to avoid "D-kick"
-        delta = error - lastError[axis];
-        lastError[axis] = error;
-        
-        dTerm = (int32_t)delta * (axis == ROLL ? PID_ROLL_D : (axis == PITCH ? PID_PITCH_D : PID_YAW_D));
-
-        // 5. Combine and Scale Output
-        // We divide by a power of 2 (e.g., >> 8) to bring the high-precision sum 
-        // back into a range usable by the motor mixer.
-        axisPID[axis] = (int16_t)((pTerm + iTerm + dTerm) >> 8);
-    }
-}

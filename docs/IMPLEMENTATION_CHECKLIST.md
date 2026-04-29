@@ -21,14 +21,14 @@
 - [✓] Output: `att.angle[ROLL]`, `att.angle[PITCH]`
 
 ### PID Stabilization
-- [ ] Implement 3-axis PID controller (ROLL, PITCH, YAW)
-- [ ] Default gains (tuned for brushed 5-inch drone):
-  - [ ] PIDROLL: P=90, I=30, D=20
-  - [ ] PIDPITCH: P=90, I=30, D=20
-  - [ ] PIDYAW: P=100, I=20, D=0
-- [ ] Anti-windup for integral term
+- [✓] Implement 3-axis PID controller (ROLL, PITCH, YAW)
+- [✓] Default gains (tuned for brushed 5-inch drone):
+  - [✓] PIDROLL: P=90, I=30, D=20
+  - [✓] PIDPITCH: P=90, I=30, D=20
+  - [✓] PIDYAW: P=100, I=20, D=0
+- [✓] Anti-windup for integral term
 - [ ] Input: attitude error + RC commands
-- [ ] Output: `axisPID[ROLL/PITCH/YAW]`
+- [✓] Output: `axisPID[ROLL/PITCH/YAW]`
 
 ### Motor Mixer (QUADX)
 - [✓] Implement `mixTable()` for X-configuration

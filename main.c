@@ -1,3 +1,5 @@
+#include "imu.h"
+#include "pid.h"
 #define DEBUG
 #include "stm8s.h"
 #include "stm8s_clk.h"
@@ -6,7 +8,7 @@
 #include <stdio.h>
 
 #include "rotors.h"
-// #include "imu.h"
+#include "pid.h"
 #include "radio.h"
 #include "timing.h"
 
@@ -32,6 +34,8 @@
 #define LEDS_PORT GPIOC
 #define LEDS_PIN GPIO_PIN_1
 
+#define LOOP_T 1000
+
 uint16_t pwm = 0;
 bool down = false;
 
@@ -43,21 +47,30 @@ int main(void){
 
   Timer_Init();
 
-#ifdef DEBUG
-  Serial_begin(115200);
-#endif /* ifdef DEBUG */
+  #ifdef DEBUG
+    Serial_begin(115200);
+  #endif /* ifdef DEBUG */
 
   Rotors_Init();
   // initMPU();
   GPIO_WriteHigh(LEDS_PORT, LEDS_PIN);
   Delay(3000);
 
+  long lastLoopTime = micros();
 
   while(true){
+    long currTime = micros();
+    if((currTime - lastLoopTime) >= LOOP_T){
+      lastLoopTime = currTime;
 
-#ifdef DEBUG
-    printf("ping %lu\n", millis());
-#endif /* ifdef DEBUG */
+      computeIMU();
+      runPID(rcCommand, att.angle);
+      mixTable(rcThrottle, axisPID);
+   }
+
+    #ifdef DEBUG
+      printf("ping %lu\n", millis());
+    #endif /* ifdef DEBUG */
 
     setAllRotorPWM(80);
     Delay(5000);
