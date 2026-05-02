@@ -1,4 +1,5 @@
 #include "serial.h"
+#include "stm8s.h"
 
 void Serial_begin(uint32_t baud_rate) {
   UART2_Init(
@@ -13,9 +14,9 @@ void Serial_begin(uint32_t baud_rate) {
 }
 
 void Serial_print_char(char value) {
-    while (!(UART2->SR & 0x80)); // Wait for TXE
+    while (!(UART2->SR & UART2_SR_TXE)); // Wait for TXE
     UART2->DR = value;
-    while (!(UART2->SR & 0x40)); // Wait for TC
+    // while (!(UART2->SR & 0x40)); // Wait for TC
 }
 
 bool Serial_available(void) {

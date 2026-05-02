@@ -1,4 +1,5 @@
 #include "timing.h"
+#include "stm8s_tim3.h"
 
 
 volatile uint32_t ms_tics = 0;
@@ -12,10 +13,10 @@ void Delay(const uint32_t ms){
 }
 
 void Timer_Init(void){
-  TIM3_TimeBaseInit(TIM3_PRESCALER_16, 1000);
+  TIM3_TimeBaseInit(TIM3_PRESCALER_128, 125);
   TIM3_ITConfig(TIM3_IT_UPDATE, ENABLE);
   TIM3_Cmd(ENABLE);
-  enableInterrupts();
+  // enableInterrupts();
 }
 
 uint32_t millis(void){
@@ -44,9 +45,9 @@ uint32_t micros(void){
   return (ms * 1000) + tim_cnt;
 }
 
-// TIM4 Update/Overflow Interrupt Vector
-void TIM3_ISR(void) __interrupt(16) {
-    ms_tics++;
-    TIM3_ClearITPendingBit(TIM3_IT_UPDATE);
-}
-
+// // TIM3 Update/Overflow Interrupt Vector
+// void TIM3_ISR(void) __interrupt(15) {
+//   ms_tics++;
+//   TIM3_ClearITPendingBit(TIM3_IT_UPDATE);
+// }
+//

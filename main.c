@@ -1,16 +1,16 @@
-#include "imu.h"
-#include "pid.h"
 #define DEBUG
 #include "stm8s.h"
-#include "stm8s_clk.h"
-#include "stm8s_gpio.h"
+// #include "stm8s_clk.h"
+// #include "stm8s_gpio.h"
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "rotors.h"
-#include "pid.h"
-#include "radio.h"
+// #include "rotors.h"
+// #include "pid.h"
+// #include "radio.h"
 #include "timing.h"
+// #include "imu.h"
+// #include "pid.h"
 
 #ifdef DEBUG
   #include "serial.h"
@@ -45,36 +45,38 @@ int main(void){
   GPIO_Init(B_LED_PORT, B_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
   GPIO_Init(LEDS_PORT, LEDS_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
 
-  Timer_Init();
 
   #ifdef DEBUG
     Serial_begin(115200);
   #endif /* ifdef DEBUG */
 
-  Rotors_Init();
+  // Rotors_Init();
   // initMPU();
-  GPIO_WriteHigh(LEDS_PORT, LEDS_PIN);
-  Delay(3000);
+  GPIO_WriteHigh(B_LED_PORT, B_LED_PIN);
+  // Delay(3000);
 
-  long lastLoopTime = micros();
+  // long lastLoopTime = micros();
+  Timer_Init();
+  int32_t cnt = 0;
 
+  enableInterrupts();
   while(true){
-    long currTime = micros();
-    if((currTime - lastLoopTime) >= LOOP_T){
-      lastLoopTime = currTime;
-
-      computeIMU();
-      runPID(rcCommand, att.angle);
-      mixTable(rcThrottle, axisPID);
-   }
+    // long currTime = micros();
+   //  if((currTime - lastLoopTime) >= LOOP_T){
+   //    lastLoopTime = currTime;
+   //
+   //    computeIMU();
+   //    runPID(rcCommand, att.angle);
+   //    mixTable(rcThrottle, axisPID);
+   // }
 
     #ifdef DEBUG
-      printf("ping %lu\n", millis());
+      printf("ping %lu\n", cnt++);
     #endif /* ifdef DEBUG */
 
-    setAllRotorPWM(80);
-    Delay(5000);
-    setAllRotorPWM(0);
-    Delay(10000);
+    // setAllRotorPWM(80);
+    // Delay(5000);
+    // setAllRotorPWM(0);
+    // Delay(10000);
   }
 }
