@@ -25,6 +25,7 @@ SOURCES = main.c \
           stm8s_tim1.c \
           stm8s_tim2.c \
           stm8s_tim3.c \
+          stm8s_tim4.c \
           stm8s_i2c.c \
           serial.c \
           radio.c \

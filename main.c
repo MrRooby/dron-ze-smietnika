@@ -1,3 +1,4 @@
+#include "stm8s_tim4.h"
 #define DEBUG
 #include "stm8s.h"
 // #include "stm8s_clk.h"
@@ -52,14 +53,14 @@ int main(void){
 
   // Rotors_Init();
   // initMPU();
-  GPIO_WriteHigh(B_LED_PORT, B_LED_PIN);
+  // GPIO_WriteHigh(B_LED_PORT, B_LED_PIN);
   // Delay(3000);
 
   // long lastLoopTime = micros();
+  printf("booting\n");
   Timer_Init();
   int32_t cnt = 0;
 
-  enableInterrupts();
   while(true){
     // long currTime = micros();
    //  if((currTime - lastLoopTime) >= LOOP_T){
@@ -71,7 +72,8 @@ int main(void){
    // }
 
     #ifdef DEBUG
-      printf("ping %lu\n", cnt++);
+      printf("%lu\n", millis());
+
     #endif /* ifdef DEBUG */
 
     // setAllRotorPWM(80);
@@ -79,4 +81,9 @@ int main(void){
     // setAllRotorPWM(0);
     // Delay(10000);
   }
+}
+
+void TIM4_UPD_OVF_IRQHandler(void) __interrupt(23) {
+    ms_tics++;
+    TIM4->SR1 &= (uint8_t)(~0x01); // Direct clear to avoid library overhead during crash
 }
