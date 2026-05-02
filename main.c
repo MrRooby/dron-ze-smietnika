@@ -22,7 +22,7 @@
 #define L_PORT GPIOD
 #define L_PIN GPIO_PIN_3
 #define R_PORT GPIOD
-#define R_PIN GPIO_PIN_0
+#define R_PIN GPIO_PIN_2
 #define F_PORT GPIOC
 #define F_PIN GPIO_PIN_3
 #define B_PORT GPIOC
@@ -66,21 +66,30 @@ int main(void){
   initPWM();
   initMPU();
   GPIO_WriteHigh(LEDS_PORT, LEDS_PIN);
-  DelayDumb(3000);
 
 
   while(true){
     printf("ping\n");
-    TIM1_SetCompare3(80);
-    TIM1_SetCompare4(80);
-    TIM2_SetCompare2(80);
-    TIM2_SetCompare3(80);
-    DelayDumb(5000);
-    TIM1_SetCompare3(0);
-    TIM1_SetCompare4(0);
-    TIM2_SetCompare2(0);
-    TIM2_SetCompare3(0);
-    DelayDumb(10000);
+    for (int i = 0; i < 100; i++) {
+      TIM1_SetCompare3(i);
+      TIM1_SetCompare4(i);
+      TIM2_SetCompare2(i);
+      TIM2_SetCompare3(i);
+      DelayDumb(10);
+    }
+    for (int i = 100; i > 0; i--) {
+      TIM1_SetCompare3(i);
+      TIM1_SetCompare4(i);
+      TIM2_SetCompare2(i);
+      TIM2_SetCompare3(i);
+      DelayDumb(10);
+    }
+    // DelayDumb(1000);
+    // TIM1_SetCompare3(0);
+    // TIM1_SetCompare4(0);
+    // TIM2_SetCompare2(0);
+    // TIM2_SetCompare3(0);
+    // DelayDumb(1000);
     // readTemp();
   }
 }
