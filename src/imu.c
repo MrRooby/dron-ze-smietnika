@@ -1,34 +1,77 @@
 #include "imu.h"
+#include "stm8s_gpio.h"
+#include "stm8s_i2c.h"
+#include "timing.h"
 #include <stdint.h>
+#include <stdio.h>
 
 int16_t gyro_bias[3] = {0,0,0};
 Attitude att = {{0,0}};
 
-void IMU_Init(void){
-  CLK_PeripheralClockConfig(CLK_PERIPHERAL_I2C, ENABLE);
-  GPIO_Init(GPIOB, GPIO_PIN_4 | GPIO_PIN_5, GPIO_MODE_OUT_OD_HIZ_FAST);
+// void IMU_Init(void){
+//   CLK_PeripheralClockConfig(CLK_PERIPHERAL_I2C, ENABLE);
+//   // GPIO_Init(GPIOB, GPIO_PIN_4 | GPIO_PIN_5, GPIO_);
+//
+//   I2C_DeInit();                              
+//   I2C_Init(
+//       100000,           // 100kHz I2C Clock
+//       0x00,             // Own address
+//       I2C_DUTYCYCLE_2,               
+//       I2C_ACK_CURR,                   
+//       I2C_ADDMODE_7BIT,
+//       16                            
+//   );
+//   I2C_Cmd(ENABLE);
+//
+//   I2C_ClearFlag(I2C_FLAG_BUSBUSY);
+//   while (I2C_GetFlagStatus(I2C_FLAG_BUSBUSY)){
+//     printf("I2C busy\n");
+//   }
+//
+//   // Wake up the IMU
+//   MPU_Write(PWR_MGMT_1, 0x01); 
+//   // Set DLPF to 42Hz
+//   MPU_Write(CONFIG, 0x03);
+//   // Sample rate of 1kHz
+//   MPU_Write(SMPLRT_DIV, 0x00);
+//   // Gyroscope +-500 deg/s
+//   MPU_Write(GYRO_CONFIG, 0x08);
+//   // Accel +-8g
+//   MPU_Write(ACCEL_CONFIG, 0x10);
+// }
 
-  I2C_DeInit();                              
-  I2C_Init(
-      400000,           // 400kHz I2C Clock
-      0x01,             // Own address
-      I2C_DUTYCYCLE_2,               
-      I2C_ACK_CURR,                   
-      I2C_ADDMODE_7BIT,
-      16                            
-  );
-  I2C_Cmd(ENABLE);
+void IMU_Init(void) {
+    // 1. Reset standard GPIOs
+    GPIO_Init(GPIOB, GPIO_PIN_4 | GPIO_PIN_5, GPIO_MODE_OUT_OD_HIZ_FAST);
+    
+    // Set both high. If analyzer is LOW here, pull-ups are bad or chip is dead.
+    GPIO_WriteHigh(GPIOB, GPIO_PIN_4); 
+    GPIO_WriteHigh(GPIOB, GPIO_PIN_5); 
+    Delay(1000); // 1 second delay - check logic analyzer! It MUST be high here.
 
-  // Wake up the IMU
-  MPU_Write(PWR_MGMT_1, 0x01); 
-  // Set DLPF to 42Hz
-  MPU_Write(CONFIG, 0x03);
-  // Sample rate of 1kHz
-  MPU_Write(SMPLRT_DIV, 0x00);
-  // Gyroscope +-500 deg/s
-  MPU_Write(GYRO_CONFIG, 0x08);
-  // Accel +-8g
-  MPU_Write(ACCEL_CONFIG, 0x10);
+    // 2. Hardware I2C Clock ON
+    CLK_PeripheralClockConfig(CLK_PERIPHERAL_I2C, ENABLE);
+
+    // 3. Reset the I2C block
+    I2C->CR2 |= I2C_CR2_SWRST; 
+    Delay(100); 
+    I2C->CR2 &= ~I2C_CR2_SWRST;
+    Delay(100);
+
+    // 4. Configure settings (Peripheral is still disabled here)
+    I2C_Init(100000, 0x00, I2C_DUTYCYCLE_2, I2C_ACK_CURR, I2C_ADDMODE_7BIT, 16);
+
+    Delay(1000); // 1 second delay - check logic analyzer! It MUST still be high here.
+
+    // 5. This is the danger zone. Enable the peripheral to take over the pins.
+    I2C_Cmd(ENABLE);
+
+    // // Wait and check if the peripheral crashes and yanks the lines low
+    // while(1) {
+    //     printf("Alive! Is logic analyzer High or Low?\n");
+    //     Delay(500);
+    // }
+    MPU_Write(PWR_MGMT_1, 0x01); 
 }
 
 void MPU_Write(uint8_t reg, uint8_t data) {

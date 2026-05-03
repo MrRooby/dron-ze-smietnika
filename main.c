@@ -1,3 +1,4 @@
+#include "stm8s_gpio.h"
 #include "stm8s_tim4.h"
 #define DEBUG
 #include "stm8s.h"
@@ -8,7 +9,7 @@
 
 // #include "rotors.h"
 // #include "pid.h"
-// #include "radio.h"
+#include "radio.h"
 #include "timing.h"
 // #include "imu.h"
 // #include "pid.h"
@@ -38,43 +39,41 @@
 #define LOOP_T 1000
 
 uint16_t pwm = 0;
-bool down = false;
+int32_t cnt = 0;
+long lastLoopTime = 0;
 
 int main(void){
   CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // Set CPU to 16MHz
                                                  //
   GPIO_Init(B_LED_PORT, B_LED_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
   GPIO_Init(LEDS_PORT, LEDS_PIN, GPIO_MODE_OUT_PP_LOW_FAST);
+  NRF24_Init();
+  // GPIO_Init(GPIOB, GPIO_PIN_4, GPIO_MODE_IN_FL_NO_IT);
+  // GPIO_Init(GPIOB, GPIO_PIN_5, GPIO_MODE_IN_FL_NO_IT);
 
 
   #ifdef DEBUG
     Serial_begin(115200);
+    printf("booting\n");
   #endif /* ifdef DEBUG */
 
   // Rotors_Init();
-  // initMPU();
-  // GPIO_WriteHigh(B_LED_PORT, B_LED_PIN);
-  // Delay(3000);
+  // IMU_Init();
 
-  // long lastLoopTime = micros();
-  printf("booting\n");
   Timer_Init();
-  int32_t cnt = 0;
 
   while(true){
-    // long currTime = micros();
-   //  if((currTime - lastLoopTime) >= LOOP_T){
-   //    lastLoopTime = currTime;
-   //
-   //    computeIMU();
-   //    runPID(rcCommand, att.angle);
-   //    mixTable(rcThrottle, axisPID);
-   // }
-
-    #ifdef DEBUG
-      printf("%lu\n", millis());
-
-    #endif /* ifdef DEBUG */
+    long currTime = millis();
+    if((currTime - lastLoopTime) >= 50){
+      GPIO_WriteReverse(B_LED_PORT, B_LED_PIN);
+      // GPIO_WriteReverse(GPIOB, GPIO_PIN_5);
+      // GPIO_WriteReverse(GPIOB, GPIO_PIN_4);
+      lastLoopTime = currTime;
+      NRF24_Write_Reg(NRF_CONFIG, 0x03); 
+      printf("Ping: %lu\n", millis()/1000);
+      printf("Status %d\n", NRF24_Get_Status());
+      NRF24_Test_Connection();
+    }
 
     // setAllRotorPWM(80);
     // Delay(5000);
@@ -83,7 +82,14 @@ int main(void){
   }
 }
 
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////// INTERRUPT VECTORS /////////////////////////////////////////
+
 void TIM4_UPD_OVF_IRQHandler(void) __interrupt(23) {
-    ms_tics++;
-    TIM4->SR1 &= (uint8_t)(~0x01); // Direct clear to avoid library overhead during crash
+  ms_tics++;
+  TIM4_ClearITPendingBit(TIM4_FLAG_UPDATE);
 }
